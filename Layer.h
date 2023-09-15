@@ -1,12 +1,11 @@
 #pragma once
-#include "Network.h"
 #include "Node.h"
 #include <vector>
 
 class Layer
 {
 public:
-	Layer(int size, int rank, int next_layer_size, bool is_first_layer);
+	Layer(int size, int rank);
 	int getSize();
 	int getRank();
 	std::vector<Node*> getNodes();
