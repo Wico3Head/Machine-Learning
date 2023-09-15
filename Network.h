@@ -13,4 +13,3 @@ private:
 	std::vector<int> structure;
 	std::vector<Layer*> layers;
 };
-
