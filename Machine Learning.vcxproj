@@ -136,6 +136,7 @@
     <ClCompile Include="Node.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Global.h" />
     <ClInclude Include="Layer.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="Node.h" />

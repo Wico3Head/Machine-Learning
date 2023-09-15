@@ -1,0 +1,4 @@
+#pragma once
+
+const int WEIGHT_INITIALISATION_SIZE = 1;
+const int BIAS_INITIALISATION_SIZE = 10;

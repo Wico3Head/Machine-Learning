@@ -7,6 +7,7 @@ class Network
 {
 public:
 	Network(std::vector<int> structure);
+	std::vector<double> activate(std::vector<double> inputs);
 
 private:
 	std::vector<int> structure;

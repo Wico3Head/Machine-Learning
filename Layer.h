@@ -6,7 +6,10 @@
 class Layer
 {
 public:
-	Layer(int size, int rank);
+	Layer(int size, int rank, int next_layer_size, bool is_first_layer);
+	int getSize();
+	int getRank();
+	std::vector<Node*> getNodes();
 
 private:
 	std::vector<Node*> nodes;
