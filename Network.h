@@ -10,6 +10,8 @@ public:
 	std::vector<double> activate(std::vector<double> inputs);
 	void learn(std::vector<std::vector<std::vector<double>>> traning_data);
 	std::vector<Layer*> getLayers();
+	void printBias();
+	void printWeights();
 
 private:
 	std::vector<int> structure;

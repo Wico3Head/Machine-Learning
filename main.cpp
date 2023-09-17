@@ -1,10 +1,11 @@
 #include "Network.h"
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <vector>
 #include <time.h>
 
 double identifyFucntion(double x, double y) {
-    return (0.05 * x + 45 < y) ? 1 : 0;
+    return (x < y) ? 1 : 0;
 }
 
 double getAccuracy(Network* network) {
@@ -21,7 +22,7 @@ double getAccuracy(Network* network) {
     return (double)accurate / 10000 * 100;
 }
 
-int gmain()
+int main()
 {
     srand(time(0));
     std::vector<int> structure = { 2, 3, 3, 2 };
@@ -39,23 +40,26 @@ int gmain()
         }
 
         std::cout << getAccuracy(network) << std::endl;
+        std::vector<std::vector<std::vector<double>>> training_data;
         for (size_t i = 0; i < 200; i++) {
-            int x = (double) rand() / RAND_MAX * 100;
-            int y = (double) rand() / RAND_MAX * 100;
-            double expected_output = identifyFucntion(x, y);
+            double x = (double) rand() / RAND_MAX;
+            double y = (double) rand() / RAND_MAX;
+            double expected_output = identifyFucntion(x*100, y*100);
 
-            std::vector<double> input = { (double)x, (double)y };
+            std::vector<double> input = { x, y };
             std::vector<double> expected_outputs = { 1 - expected_output, expected_output };
-            //network->learn(input, expected_outputs);
+            std::vector<std::vector<double>> training_pair = { input, expected_outputs };
+            training_data.push_back(training_pair);
         }
+        network->learn(training_data);
+        network->printWeights();
         
         window.clear(sf::Color::Black);
         for (double i = 1; i < 101; i++) {
             for (double j = 1; j < 101; j++) {
-                std::vector<double> inputs = { i, j };
+                std::vector<double> inputs = { i/100, j/100 };
                 std::vector<double> outputs = network->activate(inputs);
                 int decision = outputs.at(0) > outputs.at(1) ? 0 : 1;
-                std::cout << outputs.at(0) << " , " << outputs.at(1) << std::endl;
                 sf::RectangleShape rectangle(sf::Vector2f(3.0f, 3.0f));
                 rectangle.setFillColor( decision == 1 ? sf::Color::Red : sf::Color::Blue);
                 rectangle.setPosition(3 * (i - 1), 3 * (100-j));
@@ -64,32 +68,5 @@ int gmain()
         }
         window.display();
     }
-    return 0;
-}
-
-std::vector<double> test(double num) {
-    if (num < 33) {
-        return { 1, 0, 0 };
-    }
-    else if (num < 66) {
-        return { 0, 1, 0 };
-    }
-    return { 0, 0, 1 };
-}
-
-int main() {
-    Network* network = new Network({1, 2, 3});
-    std::vector<std::vector<std::vector<double>>> training_data = {};
-    for (size_t i = 0; i < 50; i++) {
-        int y = (double)rand() / RAND_MAX * 100;
-        training_data.push_back({ {(double)y}, {test(y)} });
-    }
-    network->learn(training_data);
-    
-    for (size_t i = 0; i < 100; i++) {
-        std::vector<double> outputs = network->activate({ (double) i });
-        std::cout << outputs.at(0) << " , " << outputs.at(1) << " , " << outputs.at(2) << std::endl;
-    }
-
     return 0;
 }

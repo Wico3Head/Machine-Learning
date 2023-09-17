@@ -5,7 +5,8 @@
 #include <vector>
 #include <time.h>
 #include <algorithm>
-#include "iostream"
+#include <string>
+#include <iostream>
 
 double sigmoidActivate(double input) {
 	return 1 / (1 + exp(-input));
@@ -29,22 +30,20 @@ Network::Network(std::vector<int> structure) {
 	srand((unsigned)time(NULL));
 	this->structure = structure;
 	size = structure.size();
-	layers.clear();
 	for (int current_layer = 0; current_layer < structure.size(); current_layer++) {
 		Layer* layer = new Layer(structure.at(current_layer), current_layer);
 		for (Node* node : layer->getNodes()) {
-			if (current_layer != structure.size() - 1) {
+			if (current_layer != size - 1) {
 				std::vector<double> weights = {};
 				for (size_t output_node = 0; output_node < structure.at(current_layer + 1); output_node++) {
-					weights.push_back((double)rand() / RAND_MAX * 2 * WEIGHT_INITIALISATION_SIZE - WEIGHT_INITIALISATION_SIZE);
+					double weight = (double)rand() / RAND_MAX * 2 * WEIGHT_INITIALISATION_SIZE - WEIGHT_INITIALISATION_SIZE;
+					weights.push_back(weight);
 				}
 				node->setWeights(weights);
 			}
 			if (current_layer != 0) {
-				node->setBias((double)rand() / RAND_MAX * 2 * BIAS_INITIALISATION_SIZE - BIAS_INITIALISATION_SIZE);
-			}
-			else{
-				node->setBias(0);
+				double bias = (double)rand() / RAND_MAX * 2 * BIAS_INITIALISATION_SIZE - BIAS_INITIALISATION_SIZE;
+				node->setBias(bias);
 			}
 		}
 		layers.push_back(layer);
@@ -87,13 +86,18 @@ void Network::learn(std::vector<std::vector<std::vector<double>>> training_data)
 	std::vector<std::vector<std::vector<double>>> weight_alterations;
 	std::vector<std::vector<double>> bias_alterations;
 
-	for (size_t current_layer = structure.size() - 1; current_layer > 0; current_layer--) {
+	//initialise weight and bias alteations to zero
+	for (size_t current_layer = 0; current_layer < size - 1; current_layer++) {
 		std::vector<Node*> layer = layers.at(current_layer)->getNodes();
+		std::vector<Node*> next_layer = layers.at(current_layer + 1)->getNodes();
 		std::vector<double> layer_bias_alteration;
 		std::vector<std::vector<double>> layer_weight_alteration;
-		for (size_t current_node = 0; current_node < layer.size(); current_node++) {
-			int weight_size = layer.at(current_node)->getWeights().size();
+		for (size_t current_node = 0; current_node < next_layer.size(); current_node++) {
 			layer_bias_alteration.push_back(0.0f);
+		}
+
+		for (size_t current_node = 0; current_node < layer.size(); current_node++){
+			int weight_size = layer.at(current_node)->getWeights().size();
 			std::vector<double> node_weight_alteration;
 			for (size_t current_weight = 0; current_weight < weight_size; current_weight++) {
 				node_weight_alteration.push_back(0.0f);
@@ -115,36 +119,75 @@ void Network::learn(std::vector<std::vector<std::vector<double>>> training_data)
 		for (size_t node = 0; node < expected_outputs.size(); node++) {
 			current_layer_gradients.push_back(2 * (last_layer_activation.at(node) - expected_outputs.at(node)) * lreluActivateGradient(last_layer_inputs.at(node)));
 		}
-
+		
 		for (size_t current_layer = structure.size() - 1; current_layer > 0; current_layer--) {
 			std::vector<Node*> layer = layers.at(current_layer)->getNodes();
 			for (size_t current_node = 0; current_node < layer.size(); current_node++) {
-				Node* node = layer.at(current_node);
-				node->alterBias(-current_layer_gradients.at(current_node) * LEARN_RATE);
+				bias_alterations.at(current_layer - 1).at(current_node) -= current_layer_gradients.at(current_node) * LEARN_RATE / training_data.size();
 			}
 
-			std::vector<double> weight_alterations;
 			std::vector<double> previous_layer_gradients = {};
 			std::vector<Node*> previous_layer = layers.at(current_layer - 1)->getNodes();
 			std::vector<double> previous_layer_inputs = previous_inputs.at(current_layer - 1);
 			for (size_t current_node = 0; current_node < previous_layer.size(); current_node++) {
-				weight_alterations.clear();
 				Node* node = previous_layer.at(current_node);
 				std::vector<double> node_weights = node->getWeights();
 				double node_activation = previous_activation.at(current_layer - 1).at(current_node);
 				double node_cost_gradient = 0;
 				for (size_t current_weight = 0; current_weight < node_weights.size(); current_weight++) {
-					weight_alterations.push_back(-current_layer_gradients.at(current_weight) * node_activation * LEARN_RATE);
+					weight_alterations.at(current_layer - 1).at(current_node).at(current_weight) -= current_layer_gradients.at(current_weight) * node_activation * LEARN_RATE / training_data.size();
 					node_cost_gradient += current_layer_gradients.at(current_weight) * node_weights.at(current_weight) * lreluActivateGradient(previous_layer_inputs.at(current_node));
 				}
-				node->alterWeights(weight_alterations);
 				previous_layer_gradients.push_back(node_cost_gradient);
 			}
 			current_layer_gradients = previous_layer_gradients;
 		}
 	}
+	
+	//apply the change to the weights and biases
+	for (size_t current_layer = 0; current_layer < size - 1; current_layer++) {
+		std::vector<Node*> layer = layers.at(current_layer)->getNodes();
+		std::vector<Node*> next_layer = layers.at(current_layer + 1)->getNodes();
+		std::vector<double> layer_bias_alteration = bias_alterations.at(current_layer);
+		std::vector<std::vector<double>> layer_weight_alteration = weight_alterations.at(current_layer);
+		for (size_t current_node = 0; current_node < next_layer.size(); current_node++) {
+			next_layer.at(current_node)->alterBias(layer_bias_alteration.at(current_node));
+		}
+
+		for (size_t current_node = 0; current_node < layer.size(); current_node++) {
+			std::vector<double> node_weight_alteration = layer_weight_alteration.at(current_node);
+			layer.at(current_node)->alterWeights(node_weight_alteration);
+		} 
+	}
 }
 
 std::vector<Layer*> Network::getLayers() {
 	return layers;
+}
+
+void Network::printBias() {
+	std::cout << std::endl;
+	for (size_t current_layer = 0; current_layer < size; current_layer++) {
+		std::string string_to_print = " ";
+		for (Node* node : layers.at(current_layer)->getNodes()) {
+			string_to_print += std::to_string(node->getBias()) + " ";
+		}
+		std::cout << string_to_print << std::endl;
+	}
+	std::cout << std::endl;
+}
+
+void Network::printWeights() {
+	std::cout << std::endl;
+	for (size_t current_layer = 0; current_layer < size; current_layer++) {
+		std::cout << "Layer " << current_layer + 1 << ":" << std::endl;
+		for (Node* node : layers.at(current_layer)->getNodes()) {
+			std::string string_to_print = " ";
+			for (double weight : node->getWeights()) {
+				string_to_print += std::to_string(weight) + " ";
+			}
+			std::cout << string_to_print << std::endl;
+		}
+	}
+	std::cout << std::endl;
 }
